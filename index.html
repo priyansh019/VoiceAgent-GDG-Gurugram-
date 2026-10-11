@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NovaVoice - Real-Time Voice AI Booking Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-slate: #0f172a;
+      --surface-slate: #1e293b;
+      --surface-slate-hover: #273549;
+      --border-slate: #334155;
+      --accent-blue: #3b82f6;
+      --accent-blue-hover: #2563eb;
+      --mic-red: #ef4444;
+      --mic-red-glow: rgba(239, 68, 68, 0.45);
+      --tool-green: #10b981;
+      --tool-green-glow: rgba(16, 185, 129, 0.3);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-sub: #cbd5e1;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-slate);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Header Bar */
+    header {
+      background-color: rgba(30, 41, 59, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-slate);
+      padding: 0.85rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-icon {
+      width: 2.25rem;
+      height: 2.25rem;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border-radius: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.15rem;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+    }
+
+    .brand-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+
+    .brand-subtitle {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .header-badges {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    /* Backend Connection Status Pill */
+    .backend-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      background-color: #0f172a;
+      border: 1px solid var(--border-slate);
+      border-radius: 9999px;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.775rem;
+      font-weight: 500;
+      color: var(--text-sub);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .backend-pill:hover {
+      border-color: var(--accent-blue);
+    }
+
+    .backend-dot {
+      width: 0.55rem;
+      height: 0.55rem;
+      border-radius: 50%;
+      background-color: #64748b;
+      transition: background-color 0.3s;
+    }
+    .backend-dot.connected { background-color: #10b981; box-shadow: 0 0 8px #10b981; }
+    .backend-dot.disconnected { background-color: #ef4444; box-shadow: 0 0 8px #ef4444; }
+
+    /* Assistant Status Pill */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      background-color: #0f172a;
+      border: 1px solid var(--border-slate);
+      border-radius: 9999px;
+      padding: 0.45rem 1rem;
+      font-size: 0.825rem;
+      font-weight: 500;
+      color: var(--text-sub);
+      transition: all 0.3s ease;
+    }
+
+    .status-dot {
+      width: 0.65rem;
+      height: 0.65rem;
+      border-radius: 50%;
+      background-color: #64748b;
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .status-dot.disconnected { background-color: #64748b; box-shadow: none; }
+    .status-dot.connecting { background-color: #f59e0b; box-shadow: 0 0 10px #f59e0b; }
+    .status-dot.ready { background-color: #3b82f6; box-shadow: 0 0 10px #3b82f6; }
+    .status-dot.listening { background-color: #ef4444; box-shadow: 0 0 12px #ef4444; animation: pulseRed 1.4s infinite; }
+    .status-dot.processing { background-color: #8b5cf6; box-shadow: 0 0 12px #8b5cf6; animation: pulsePurple 1.4s infinite; }
+    .status-dot.speaking { background-color: #10b981; box-shadow: 0 0 12px #10b981; animation: pulseGreen 1.4s infinite; }
+    .status-dot.ended { background-color: #64748b; }
+
+    @keyframes pulseRed {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    @keyframes pulsePurple {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7); }
+      70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(139, 92, 246, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+    }
+
+    @keyframes pulseGreen {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .icon-btn {
+      background-color: var(--surface-slate);
+      border: 1px solid var(--border-slate);
+      color: var(--text-muted);
+      border-radius: 0.5rem;
+      padding: 0.45rem 0.75rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.2s;
+    }
+    .icon-btn:hover {
+      color: var(--text-main);
+      background-color: var(--surface-slate-hover);
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.25rem 1rem 1.5rem 1rem;
+      gap: 1.25rem;
+    }
+
+    /* Transcript Panel */
+    .transcript-container {
+      flex: 1;
+      min-height: 380px;
+      max-height: 480px;
+      background-color: var(--surface-slate);
+      border: 1px solid var(--border-slate);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      scroll-behavior: smooth;
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.25);
+    }
+
+    .transcript-container::-webkit-scrollbar {
+      width: 6px;
+    }
+    .transcript-container::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .transcript-container::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+
+    /* Transcript Bubbles */
+    .msg-system {
+      align-self: center;
+      color: var(--text-muted);
+      font-style: italic;
+      font-size: 0.8rem;
+      background-color: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(51, 65, 85, 0.5);
+      padding: 0.4rem 0.95rem;
+      border-radius: 9999px;
+      text-align: center;
+      max-width: 85%;
+    }
+
+    .msg-user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #ffffff;
+      padding: 0.75rem 1.05rem;
+      border-radius: 1rem 1rem 0.2rem 1rem;
+      max-width: 78%;
+      font-size: 0.925rem;
+      line-height: 1.45;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+      word-break: break-word;
+    }
+
+    .msg-agent {
+      align-self: flex-start;
+      background-color: #172554;
+      border: 1px solid #1e40af;
+      color: #eff6ff;
+      padding: 0.75rem 1.05rem;
+      border-radius: 1rem 1rem 1rem 0.2rem;
+      max-width: 80%;
+      font-size: 0.925rem;
+      line-height: 1.5;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      word-break: break-word;
+    }
+
+    .msg-sender {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.25rem;
+      opacity: 0.75;
+    }
+
+    /* Dashed Green Tool Cards */
+    .tool-card {
+      align-self: center;
+      width: 100%;
+      max-width: 92%;
+      background-color: rgba(16, 185, 129, 0.06);
+      border: 1.5px dashed var(--tool-green);
+      border-radius: 0.75rem;
+      padding: 0.85rem 1.1rem;
+      color: var(--text-main);
+      font-size: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);
+      animation: fadeIn 0.3s ease;
+    }
+
+    .tool-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 600;
+      color: var(--tool-green);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .tool-status {
+      font-size: 0.72rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 0.25rem;
+      background-color: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      font-family: 'Inter', sans-serif;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .spinner {
+      width: 0.65rem;
+      height: 0.65rem;
+      border: 1.5px solid rgba(52, 211, 153, 0.3);
+      border-top-color: #34d399;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .tool-body {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--text-sub);
+      background-color: rgba(15, 23, 42, 0.5);
+      border-radius: 0.4rem;
+      padding: 0.5rem 0.65rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .tool-result {
+      font-size: 0.8rem;
+      color: #a7f3d0;
+      background-color: rgba(6, 78, 59, 0.35);
+      border-radius: 0.4rem;
+      padding: 0.5rem 0.65rem;
+      white-space: pre-wrap;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Prompt Suggestion Chips */
+    .chips-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .chip-btn {
+      background-color: var(--surface-slate);
+      border: 1px solid var(--border-slate);
+      color: var(--text-sub);
+      padding: 0.4rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .chip-btn:hover {
+      background-color: var(--surface-slate-hover);
+      border-color: var(--accent-blue);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    /* Interactive Text / Command Input Bar */
+    .input-bar-container {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      background-color: var(--surface-slate);
+      border: 1px solid var(--border-slate);
+      border-radius: 0.85rem;
+      padding: 0.45rem 0.65rem;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .chat-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-main);
+      font-size: 0.925rem;
+      padding: 0.4rem 0.6rem;
+      font-family: inherit;
+    }
+
+    .chat-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .send-btn {
+      background-color: var(--accent-blue);
+      border: none;
+      color: #fff;
+      width: 2.25rem;
+      height: 2.25rem;
+      border-radius: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+    }
+
+    .send-btn:hover {
+      background-color: var(--accent-blue-hover);
+      transform: translateY(-1px);
+    }
+
+    /* Call Controls Section */
+    .controls-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0;
+    }
+
+    .call-button-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 130px;
+      height: 130px;
+    }
+
+    /* Animated Volume Pulse Rings */
+    .pulse-ring {
+      position: absolute;
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      border: 2px solid var(--accent-blue);
+      opacity: 0.3;
+      transform: scale(1);
+      transition: transform 0.08s ease-out, opacity 0.08s ease-out, border-color 0.3s;
+      pointer-events: none;
+    }
+
+    .pulse-ring-outer {
+      position: absolute;
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      border: 1.5px dashed var(--accent-blue);
+      opacity: 0.2;
+      transform: scale(1);
+      transition: transform 0.12s ease-out, opacity 0.12s ease-out;
+      pointer-events: none;
+    }
+
+    /* Main Voice Button */
+    .call-btn {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1e293b, #334155);
+      border: 2px solid var(--border-slate);
+      color: #ffffff;
+      font-size: 2.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      outline: none;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      transition: transform 0.08s ease-out, background 0.3s, border-color 0.3s, box-shadow 0.3s;
+      z-index: 5;
+    }
+
+    .call-btn:hover {
+      background: linear-gradient(135deg, #273549, #3e5068);
+      border-color: var(--accent-blue);
+    }
+
+    .call-btn.live {
+      background: linear-gradient(135deg, #dc2626, #ef4444);
+      border-color: #f87171;
+      box-shadow: 0 0 35px var(--mic-red-glow), 0 10px 25px rgba(0, 0, 0, 0.5);
+    }
+
+    .call-hint {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    /* Setup Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 1rem;
+      transition: opacity 0.2s ease, visibility 0.2s ease;
+    }
+
+    .modal-overlay.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .modal-card {
+      position: relative;
+      background-color: var(--surface-slate);
+      border: 1px solid var(--border-slate);
+      border-radius: 1.25rem;
+      padding: 2.25rem;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .modal-close-btn {
+      position: absolute;
+      top: 1rem;
+      right: 1.25rem;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.25rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .modal-close-btn:hover {
+      color: #fff;
+    }
+
+    .modal-header {
+      text-align: center;
+    }
+
+    .modal-header h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 0.35rem;
+    }
+
+    .modal-header p {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .form-label {
+      font-size: 0.825rem;
+      font-weight: 600;
+      color: var(--text-sub);
+    }
+
+    .input-field {
+      width: 100%;
+      background-color: var(--bg-slate);
+      border: 1px solid var(--border-slate);
+      border-radius: 0.6rem;
+      padding: 0.85rem 1rem;
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-field:focus {
+      border-color: var(--accent-blue);
+    }
+
+    .modal-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .modal-btn {
+      background-color: var(--accent-blue);
+      color: #ffffff;
+      border: none;
+      border-radius: 0.6rem;
+      padding: 0.85rem 1.5rem;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .modal-btn:hover {
+      background-color: var(--accent-blue-hover);
+      transform: translateY(-1px);
+    }
+
+    .modal-secondary-btn {
+      background-color: transparent;
+      color: var(--text-sub);
+      border: 1px solid var(--border-slate);
+      border-radius: 0.6rem;
+      padding: 0.75rem 1.5rem;
+      font-weight: 500;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .modal-secondary-btn:hover {
+      background-color: var(--surface-slate-hover);
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header>
+    <div class="brand-group">
+      <div class="brand-icon">🎙️</div>
+      <div>
+        <div class="brand-title">NovaVoice</div>
+        <div class="brand-subtitle">Voice AI Booking Assistant</div>
+      </div>
+    </div>
+
+    <!-- Header Badges -->
+    <div class="header-badges">
+      <!-- Backend Connection Pill -->
+      <div class="backend-pill" id="backendPill" title="Click to test Flask backend connection (http://127.0.0.1:5000/health)">
+        <div class="backend-dot" id="backendDot"></div>
+        <span id="backendText">Backend: Checking...</span>
+      </div>
+
+      <!-- Assistant Status Pill -->
+      <div class="status-pill" id="statusPill">
+        <div class="status-dot ready" id="statusDot"></div>
+        <span id="statusText">Ready</span>
+      </div>
+
+      <button class="icon-btn" id="openSettingsBtn" title="Gemini Live Settings">
+        ⚙️ <span>Mode</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Interaction Area -->
+  <main>
+    <!-- Transcript Stream -->
+    <div class="transcript-container" id="transcriptContainer">
+      <div class="msg-system">
+        👋 Welcome to NovaVoice! Click the microphone button below to speak, type in the box, or click a quick prompt chip.
+      </div>
+    </div>
+
+    <!-- Quick Prompt Chips -->
+    <div class="chips-row">
+      <button class="chip-btn" data-query="Check my availability for today">
+        📅 Check today's availability
+      </button>
+      <button class="chip-btn" data-query="Check my calendar for tomorrow">
+        🕒 Check tomorrow's schedule
+      </button>
+      <button class="chip-btn" data-query="Book a meeting for Sarah at 3:00 PM tomorrow">
+        ✍️ Book meeting for Sarah at 3:00 PM tomorrow
+      </button>
+      <button class="chip-btn" data-query="What meetings are blocked tomorrow?">
+        🔍 List blocked slots tomorrow
+      </button>
+    </div>
+
+    <!-- Interactive Chat Input Bar -->
+    <div class="input-bar-container">
+      <input 
+        type="text" 
+        id="chatInput" 
+        class="chat-input" 
+        placeholder="Type a command or click the microphone (e.g. 'Check availability for tomorrow')..." 
+        autocomplete="off"
+      >
+      <button class="send-btn" id="sendBtn" title="Send request">➤</button>
+    </div>
+
+    <!-- Voice Call Controls -->
+    <div class="controls-panel">
+      <div class="call-button-wrapper">
+        <div class="pulse-ring-outer" id="pulseRingOuter"></div>
+        <div class="pulse-ring" id="pulseRing"></div>
+        <button class="call-btn" id="callBtn" title="Click to speak">
+          🎙️
+        </button>
+      </div>
+      <div class="call-hint" id="callHint">
+        Click microphone to speak with NovaVoice
+      </div>
+    </div>
+  </main>
+
+  <!-- Settings / Gemini Key Modal -->
+  <div class="modal-overlay hidden" id="setupModal">
+    <div class="modal-card">
+      <button class="modal-close-btn" id="closeModalBtn" title="Close">&times;</button>
+      <div class="modal-header">
+        <h2>NovaVoice Mode & Settings</h2>
+        <p>NovaVoice operates in <strong>Interactive Assistant Mode</strong> connected to your local Calendar Bridge on port 5000. Optionally connect directly to Gemini Live API.</p>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="apiKeyInput">Gemini Live API Key (Optional)</label>
+        <input 
+          type="password" 
+          id="apiKeyInput" 
+          class="input-field" 
+          placeholder="AIzaSy... (Leave empty for Local Voice mode)" 
+          autocomplete="off"
+          spellcheck="false"
+        >
+      </div>
+
+      <div class="modal-actions">
+        <button class="modal-btn" id="saveKeyBtn">Save & Use Gemini Live Cloud</button>
+        <button class="modal-secondary-btn" id="useLocalBtn">Use Local Voice Assistant Mode</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Configuration & State
+    const BACKEND_URL = "http://127.0.0.1:5000";
+    let apiKey = localStorage.getItem("nova_gemini_api_key") || "";
+    let isListening = false;
+    let isCallActive = false;
+    let ws = null;
+    let speechRecognition = null;
+
+    // Web Audio Visualizer State
+    let audioCtx = null;
+    let micStream = null;
+    let micAnalyser = null;
+    let animFrameId = null;
+
+    // DOM Elements
+    const backendDot = document.getElementById("backendDot");
+    const backendText = document.getElementById("backendText");
+    const backendPill = document.getElementById("backendPill");
+    const statusDot = document.getElementById("statusDot");
+    const statusText = document.getElementById("statusText");
+    const callBtn = document.getElementById("callBtn");
+    const callHint = document.getElementById("callHint");
+    const pulseRing = document.getElementById("pulseRing");
+    const pulseRingOuter = document.getElementById("pulseRingOuter");
+    const transcriptContainer = document.getElementById("transcriptContainer");
+    const chatInput = document.getElementById("chatInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const setupModal = document.getElementById("setupModal");
+    const closeModalBtn = document.getElementById("closeModalBtn");
+    const openSettingsBtn = document.getElementById("openSettingsBtn");
+    const apiKeyInput = document.getElementById("apiKeyInput");
+    const saveKeyBtn = document.getElementById("saveKeyBtn");
+    const useLocalBtn = document.getElementById("useLocalBtn");
+
+    if (apiKey) apiKeyInput.value = apiKey;
+
+    // 1. Backend Health Check
+    async function checkBackendHealth() {
+      try {
+        const resp = await fetch(`${BACKEND_URL}/health`);
+        if (resp.ok) {
+          const data = await resp.json();
+          backendDot.className = "backend-dot connected";
+          backendText.textContent = data.calendar_integration?.connected 
+            ? "Backend: Connected (Calendar Ready)" 
+            : "Backend: Connected (Calendar Degraded)";
+        } else {
+          backendDot.className = "backend-dot disconnected";
+          backendText.textContent = "Backend: Degraded (" + resp.status + ")";
+        }
+      } catch (err) {
+        backendDot.className = "backend-dot disconnected";
+        backendText.textContent = "Backend: Offline (Check port 5000)";
+      }
+    }
+
+    checkBackendHealth();
+    setInterval(checkBackendHealth, 10000);
+    backendPill.addEventListener("click", () => {
+      checkBackendHealth();
+      appendSystemMessage("🔄 Refreshing backend health check...");
+    });
+
+    // 2. UI Status Management
+    function setStatus(state, text) {
+      statusDot.className = "status-dot " + state;
+      statusText.textContent = text;
+      
+      if (state === "listening") {
+        pulseRing.style.borderColor = "var(--mic-red)";
+        pulseRingOuter.style.borderColor = "var(--mic-red)";
+      } else if (state === "processing") {
+        pulseRing.style.borderColor = "#8b5cf6";
+        pulseRingOuter.style.borderColor = "#8b5cf6";
+      } else if (state === "speaking") {
+        pulseRing.style.borderColor = "var(--tool-green)";
+        pulseRingOuter.style.borderColor = "var(--tool-green)";
+      } else {
+        pulseRing.style.borderColor = "var(--accent-blue)";
+        pulseRingOuter.style.borderColor = "var(--accent-blue)";
+      }
+    }
+
+    // 3. Transcript Bubbles & Tool Cards
+    function appendSystemMessage(msg) {
+      const div = document.createElement("div");
+      div.className = "msg-system";
+      div.textContent = msg;
+      transcriptContainer.appendChild(div);
+      transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
+    }
+
+    function appendUserMessage(text) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "msg-user";
+      wrapper.innerHTML = `<div class="msg-sender">You</div><div class="msg-content">${escapeHtml(text)}</div>`;
+      transcriptContainer.appendChild(wrapper);
+      transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
+    }
+
+    function appendAgentMessage(text) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "msg-agent";
+      wrapper.innerHTML = `<div class="msg-sender">NovaVoice</div><div class="msg-content">${escapeHtml(text)}</div>`;
+      transcriptContainer.appendChild(wrapper);
+      transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
+    }
+
+    function appendToolCard(name, args) {
+      const card = document.createElement("div");
+      card.className = "tool-card";
+      
+      const header = document.createElement("div");
+      header.className = "tool-header";
+      header.innerHTML = `<span>🔍 Action: ${name}()</span><span class="tool-status"><span class="spinner"></span> Querying Calendar...</span>`;
+      
+      const body = document.createElement("div");
+      body.className = "tool-body";
+      
+      let formattedArgs = "";
+      if (name === "check_availability") {
+        formattedArgs = `↳ Date: ${args.date || JSON.stringify(args)}`;
+      } else if (name === "book_meeting") {
+        formattedArgs = `↳ Title: ${args.title || 'N/A'}\n↳ Date/Time: ${args.date_time || 'N/A'}\n↳ Guest: ${args.guest_email || 'N/A'}`;
+      } else {
+        formattedArgs = JSON.stringify(args, null, 2);
+      }
+      body.textContent = formattedArgs;
+
+      card.appendChild(header);
+      card.appendChild(body);
+      transcriptContainer.appendChild(card);
+      transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
+
+      return {
+        updateResult: (result, isError = false) => {
+          const statusSpan = header.querySelector(".tool-status");
+          if (statusSpan) {
+            statusSpan.textContent = isError ? "Failed" : "Success";
+            statusSpan.style.backgroundColor = isError ? "rgba(239,68,68,0.2)" : "rgba(16,185,129,0.2)";
+            statusSpan.style.color = isError ? "#f87171" : "#34d399";
+          }
+          const resBox = document.createElement("div");
+          resBox.className = "tool-result";
+          resBox.textContent = (isError ? "❌ " : "✅ ") + result;
+          card.appendChild(resBox);
+          transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
+        }
+      };
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // 4. Voice Speech Synthesis
+    function speakText(text) {
+      if (!window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.05;
+      utterance.pitch = 1.0;
+      
+      setStatus("speaking", "Agent Speaking...");
+      animateVolumeRings(1.2, 0.8, 1200);
+
+      utterance.onend = () => {
+        setStatus("ready", "Ready");
+        resetVisualizers();
+      };
+      utterance.onerror = () => {
+        setStatus("ready", "Ready");
+        resetVisualizers();
+      };
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    // 5. Intelligent Intent Processor
+    async function processUserCommand(rawText) {
+      const text = rawText.trim();
+      if (!text) return;
+
+      appendUserMessage(text);
+      setStatus("processing", "Processing Calendar...");
+      
+      const lower = text.toLowerCase();
+      const now = new Date();
+
+      // Helper to compute ISO date string
+      function getIsoDate(offsetDays = 0) {
+        const d = new Date(now);
+        d.setDate(d.getDate() + offsetDays);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      }
+
+      // Check Availability Intent
+      if (
+        lower.includes("availab") || 
+        lower.includes("free") || 
+        lower.includes("schedule") || 
+        lower.includes("calendar") || 
+        lower.includes("busy") || 
+        lower.includes("slot") ||
+        lower.includes("what meetings")
+      ) {
+        let targetDate = getIsoDate(0); // default today
+        if (lower.includes("tomorrow")) {
+          targetDate = getIsoDate(1);
+        } else if (lower.includes("yesterday")) {
+          targetDate = getIsoDate(-1);
+        } else {
+          // Check for date pattern YYYY-MM-DD
+          const match = text.match(/\d{4}-\d{2}-\d{2}/);
+          if (match) targetDate = match[0];
+        }
+
+        const toolCard = appendToolCard("check_availability", { date: targetDate });
+
+        try {
+          const resp = await fetch(`${BACKEND_URL}/api/check_availability`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ date: targetDate })
+          });
+
+          const data = await resp.json();
+          if (resp.ok) {
+            const resultMsg = data.result || "Calendar is free.";
+            toolCard.updateResult(resultMsg, false);
+            appendAgentMessage(`Here is the schedule for ${targetDate}:\n${resultMsg}`);
+            speakText(resultMsg);
+          } else {
+            const err = data.result || `Server returned error ${resp.status}`;
+            toolCard.updateResult(err, true);
+            appendAgentMessage(`I encountered an issue checking the calendar: ${err}`);
+            speakText("I encountered an issue checking the calendar.");
+          }
+        } catch (e) {
+          toolCard.updateResult(e.message, true);
+          const failMsg = `Failed to connect to backend at ${BACKEND_URL}. Ensure 'api_server.py' is running.`;
+          appendAgentMessage(failMsg);
+          speakText("Failed to connect to the backend server.");
+        }
+        return;
+      }
+
+      // Booking Intent
+      if (
+        lower.includes("book") || 
+        lower.includes("schedule a meeting") || 
+        lower.includes("create event") || 
+        lower.includes("meeting for")
+      ) {
+        let guest = "Guest";
+        // Extract guest name e.g. "for Sarah", "with John"
+        const nameMatch = text.match(/(?:for|with)\s+([A-Za-z0-9._%+-]+(?:@[A-Za-z0-9.-]+\.[A-Za-z]{2,4})?|[A-Za-z]+)/i);
+        if (nameMatch && nameMatch[1]) {
+          guest = nameMatch[1];
+        }
+
+        let targetDate = getIsoDate(0);
+        if (lower.includes("tomorrow")) {
+          targetDate = getIsoDate(1);
+        }
+
+        // Time parsing (e.g. "at 3:00 pm", "at 14:00", "at 3pm")
+        let hour = 14;
+        let minute = 0;
+        const timeMatch = text.match(/at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+        if (timeMatch) {
+          hour = parseInt(timeMatch[1], 10);
+          minute = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+          const ampm = timeMatch[3] ? timeMatch[3].toLowerCase() : null;
+          if (ampm === "pm" && hour < 12) hour += 12;
+          if (ampm === "am" && hour === 12) hour = 0;
+        }
+
+        // Format ISO datetime with local offset
+        const tzOffsetMinutes = -now.getTimezoneOffset();
+        const offsetSign = tzOffsetMinutes >= 0 ? "+" : "-";
+        const offsetHours = String(Math.floor(Math.abs(tzOffsetMinutes) / 60)).padStart(2, "0");
+        const offsetMins = String(Math.abs(tzOffsetMinutes) % 60).padStart(2, "0");
+        const tzString = `${offsetSign}${offsetHours}:${offsetMins}`;
+
+        const isoDateTime = `${targetDate}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00${tzString}`;
+        const title = `NovaVoice Demo: ${guest}`;
+
+        const toolCard = appendToolCard("book_meeting", {
+          title: title,
+          date_time: isoDateTime,
+          guest_email: guest
+        });
+
+        try {
+          const resp = await fetch(`${BACKEND_URL}/api/book_meeting`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: title,
+              date_time: isoDateTime,
+              guest_email: guest
+            })
+          });
+
+          const data = await resp.json();
+          if (resp.ok) {
+            const resultMsg = data.result || "Meeting booked successfully!";
+            toolCard.updateResult(resultMsg, false);
+            appendAgentMessage(`✅ ${resultMsg}`);
+            speakText(`Success! Meeting booked on Google Calendar for ${guest}.`);
+          } else {
+            const err = data.result || `Server returned error ${resp.status}`;
+            toolCard.updateResult(err, true);
+            appendAgentMessage(`Could not complete booking: ${err}`);
+            speakText("Could not complete the booking.");
+          }
+        } catch (e) {
+          toolCard.updateResult(e.message, true);
+          appendAgentMessage(`Connection failure: ${e.message}`);
+        }
+        return;
+      }
+
+      // Default Friendly Response
+      const response = `I heard: "${text}". I can check calendar availability (e.g., "Check availability for tomorrow") or book meetings (e.g., "Book a meeting for Sarah at 3:00 PM tomorrow").`;
+      appendAgentMessage(response);
+      speakText(response);
+    }
+
+    // 6. Speech Recognition Setup (Web Speech API)
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    function startVoiceListening() {
+      if (!SpeechRecognition) {
+        alert("Web Speech recognition is not supported in this browser. Please use Chrome, Edge, or the text input bar below.");
+        return;
+      }
+
+      try {
+        if (speechRecognition) {
+          speechRecognition.abort();
+        }
+
+        speechRecognition = new SpeechRecognition();
+        speechRecognition.continuous = false;
+        speechRecognition.interimResults = true;
+        speechRecognition.lang = 'en-US';
+
+        speechRecognition.onstart = () => {
+          isListening = true;
+          callBtn.classList.add("live");
+          callBtn.textContent = "⏹️";
+          setStatus("listening", "Listening... (Speak now)");
+          callHint.textContent = "Listening... Speak your calendar request";
+          startMicVisualizer();
+        };
+
+        let finalTranscript = "";
+
+        speechRecognition.onresult = (event) => {
+          let interimTranscript = "";
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript;
+            } else {
+              interimTranscript += event.results[i][0].transcript;
+            }
+          }
+          if (interimTranscript) {
+            callHint.textContent = `"${interimTranscript}"`;
+          }
+        };
+
+        speechRecognition.onerror = (event) => {
+          console.warn("Speech recognition error:", event.error);
+          stopVoiceListening();
+          if (event.error !== "no-speech") {
+            appendSystemMessage(`⚠️ Microphone error: ${event.error}`);
+          }
+          setStatus("ready", "Ready");
+          callHint.textContent = "Click microphone to speak";
+        };
+
+        speechRecognition.onend = () => {
+          stopVoiceListening();
+          if (finalTranscript.trim()) {
+            processUserCommand(finalTranscript.trim());
+          } else {
+            setStatus("ready", "Ready");
+            callHint.textContent = "Click microphone to speak";
+          }
+        };
+
+        speechRecognition.start();
+      } catch (err) {
+        console.error("Speech recognition startup error:", err);
+        stopVoiceListening();
+      }
+    }
+
+    function stopVoiceListening() {
+      isListening = false;
+      callBtn.classList.remove("live");
+      callBtn.textContent = "🎙️";
+      if (speechRecognition) {
+        try { speechRecognition.stop(); } catch (e) {}
+      }
+      stopMicVisualizer();
+    }
+
+    // 7. Visualizer & Volume Animations
+    async function startMicVisualizer() {
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) return;
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const source = audioCtx.createMediaStreamSource(micStream);
+        micAnalyser = audioCtx.createAnalyser();
+        micAnalyser.fftSize = 256;
+        source.connect(micAnalyser);
+
+        const dataArray = new Uint8Array(128);
+
+        function updateMeter() {
+          if (!isListening) return;
+          micAnalyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+          const avg = sum / (dataArray.length * 255);
+
+          const scale = 1 + Math.min(avg * 0.4, 0.25);
+          callBtn.style.transform = `scale(${scale})`;
+          pulseRing.style.transform = `scale(${1 + avg * 0.7})`;
+          pulseRing.style.opacity = `${0.3 + avg * 0.6}`;
+          pulseRingOuter.style.transform = `scale(${1 + avg * 1.1})`;
+          pulseRingOuter.style.opacity = `${0.2 + avg * 0.5}`;
+
+          animFrameId = requestAnimationFrame(updateMeter);
+        }
+        updateMeter();
+      } catch (e) {
+        console.warn("Visualizer audio context:", e);
+      }
+    }
+
+    function stopMicVisualizer() {
+      if (animFrameId) {
+        cancelAnimationFrame(animFrameId);
+        animFrameId = null;
+      }
+      if (micStream) {
+        micStream.getTracks().forEach(t => t.stop());
+        micStream = null;
+      }
+      if (audioCtx) {
+        audioCtx.close().catch(() => {});
+        audioCtx = null;
+      }
+      resetVisualizers();
+    }
+
+    function animateVolumeRings(scaleMax, opacityMax, durationMs) {
+      pulseRing.style.transform = `scale(${scaleMax})`;
+      pulseRing.style.opacity = opacityMax;
+      pulseRingOuter.style.transform = `scale(${scaleMax * 1.2})`;
+      pulseRingOuter.style.opacity = opacityMax * 0.8;
+      setTimeout(resetVisualizers, durationMs);
+    }
+
+    function resetVisualizers() {
+      callBtn.style.transform = "scale(1)";
+      pulseRing.style.transform = "scale(1)";
+      pulseRing.style.opacity = "0.3";
+      pulseRingOuter.style.transform = "scale(1)";
+      pulseRingOuter.style.opacity = "0.2";
+    }
+
+    // 8. Event Listeners for Controls
+    callBtn.addEventListener("click", () => {
+      if (isListening) {
+        stopVoiceListening();
+      } else {
+        startVoiceListening();
+      }
+    });
+
+    sendBtn.addEventListener("click", () => {
+      const val = chatInput.value.trim();
+      if (val) {
+        chatInput.value = "";
+        processUserCommand(val);
+      }
+    });
+
+    chatInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const val = chatInput.value.trim();
+        if (val) {
+          chatInput.value = "";
+          processUserCommand(val);
+        }
+      }
+    });
+
+    // Quick Chips click handlers
+    document.querySelectorAll(".chip-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const query = btn.getAttribute("data-query");
+        if (query) {
+          processUserCommand(query);
+        }
+      });
+    });
+
+    // Modal Handlers
+    openSettingsBtn.addEventListener("click", () => {
+      setupModal.classList.remove("hidden");
+    });
+
+    closeModalBtn.addEventListener("click", () => {
+      setupModal.classList.add("hidden");
+    });
+
+    useLocalBtn.addEventListener("click", () => {
+      setupModal.classList.add("hidden");
+      appendSystemMessage("ℹ️ Operating in Local Interactive Assistant mode with Google Calendar.");
+    });
+
+    saveKeyBtn.addEventListener("click", () => {
+      const keyVal = apiKeyInput.value.trim();
+      if (keyVal) {
+        apiKey = keyVal;
+        localStorage.setItem("nova_gemini_api_key", apiKey);
+        appendSystemMessage("🔑 Gemini API Key saved.");
+      }
+      setupModal.classList.add("hidden");
+    });
+  </script>
+</body>
+</html>

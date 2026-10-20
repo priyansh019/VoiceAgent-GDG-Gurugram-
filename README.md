@@ -186,3 +186,6 @@ python -m http.server 8000
    - NovaVoice will invoke `book_meeting()`, create the Google Calendar event, and confirm the details with you.
 6. Interruption (Barge-in): You can speak at any time while the agent is talking; playback stops immediately and the agent listens to you.
 7. Click the button again (⏹️) to end the call anytime.
+
+
+## Not a full Project
